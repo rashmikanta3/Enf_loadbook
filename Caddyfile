@@ -5,6 +5,6 @@
 # }
 
 # Option B: If testing directly with Google Cloud VM's External IP (HTTP only)
-:80 {
+enfloadbook.duckdns.org {
     reverse_proxy app:8000
 }

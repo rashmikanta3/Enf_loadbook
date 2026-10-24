@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management Summary - Vigilance Review</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="nav-bar">
+        <span>⚡ Executive Management Review</span>
+        <a href="/" class="nav-link">← Back to Inspection Entry</a>
+    </div>
+
+    <div class="container">
+        <!-- Date Filters & Actions -->
+        <div class="filter-bar card">
+            <div class="filter-inputs">
+                <div>
+                    <label>From Date:</label>
+                    <input type="date" id="filterFromDate">
+                </div>
+                <div>
+                    <label>To Date:</label>
+                    <input type="date" id="filterToDate">
+                </div>
+                <button id="filterBtn" class="btn-secondary">Apply Filter</button>
+                <button id="resetBtn" class="btn-ghost">Reset</button>
+            </div>
+            <button id="mailReportBtn" class="btn-email">✉️ Email This Summary to Management</button>
+        </div>
+
+        <div id="summaryAlert" class="alert hidden"></div>
+
+        <div class="grid-layout">
+            <!-- Circle Summary -->
+            <section class="card">
+                <h2>Circle-Wise Summary</h2>
+                <div class="table-container">
+                    <table id="circleTable">
+                        <thead>
+                            <tr>
+                                <th>Circle</th>
+                                <th>Total Cases</th>
+                                <th>Total Load (kW)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Team Summary -->
+            <section class="card">
+                <h2>Name-Wise Summary</h2>
+                <div class="table-container">
+                    <table id="nameTable">
+                        <thead>
+                            <tr>
+                                <th>Employee Name</th>
+                                <th>Emp ID</th>
+                                <th>Circle</th>
+                                <th>Total Cases</th>
+                                <th>Total Load (kW)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/summary.js"></script>
+</body>
+
+</html>

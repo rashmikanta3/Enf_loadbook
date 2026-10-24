@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: vigilance_fastapi
+    restart: always
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    networks:
+      - vigilance_network
+
+  caddy:
+    image: caddy:2.7-alpine
+    container_name: vigilance_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 QUIC support
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - vigilance_network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  vigilance_network:
+    driver: bridge

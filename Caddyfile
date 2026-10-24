@@ -1,0 +1,10 @@
+# Option A: If you have a custom domain name (e.g., vigilance.yourdomain.com)
+# Replace with your actual domain:
+# vigilance.yourdomain.com {
+#     reverse_proxy app:8000
+# }
+
+# Option B: If testing directly with Google Cloud VM's External IP (HTTP only)
+:80 {
+    reverse_proxy app:8000
+}

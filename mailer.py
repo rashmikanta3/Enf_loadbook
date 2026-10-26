@@ -164,7 +164,7 @@ def send_summary_email(
         date_label = f"Up to {to_date}"
 
     msg = MIMEMultipart("mixed")
-    msg["Subject"] = f"Electricity Vigilance: Circle & Name Wise Summary ({date_label})"
+    msg["Subject"] = f"Enforcement Circle & Name Wise Load Booking Summary ({date_label})"
     msg["From"] = SENDER_EMAIL
     msg["To"] = ", ".join(MANAGEMENT_EMAILS)
 
@@ -211,9 +211,9 @@ def send_summary_email(
     html_content = f"""
     <html>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a202c; line-height: 1.4;">
-        <h2 style="color: #0b3954; margin-bottom: 4px;">Electricity Vigilance Inspection Summary</h2>
+        <h2 style="color: #0b3954; margin-bottom: 4px;">Enforcement load Booking Summary</h2>
         <p style="margin-top: 0; color: #4a5568;"><strong>Inspection Period:</strong> {date_label}</p>
-        <p style="font-size: 0.9rem; color: #718096;">The complete multi-sheet Excel report is attached below.</p>
+        <p style="font-size: 0.9rem; color: #718096;">The complete multi-sheet Excel report is attached for kind reference.</p>
 
         <h3 style="color: #0b3954; margin-bottom: 8px;">1. Circle-Wise Summary</h3>
         <table style="border-collapse: collapse; width: 100%; max-width: 550px; font-size: 13px;">

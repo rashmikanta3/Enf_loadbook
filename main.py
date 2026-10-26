@@ -139,6 +139,75 @@ def compute_summaries(db: Session, from_date: Optional[date] = None, to_date: Op
 
 
 # ------------------------------------------
+# Theft-Type Analysis Helper (DAE / DT / MISUSE ...)
+# ------------------------------------------
+PREFERRED_THEFT_TYPES = ["DAE", "DT", "MISUSE"]
+
+def compute_theft_analysis(db: Session, from_date: Optional[date] = None, to_date: Optional[date] = None):
+    """
+    Cases and kW booked per theft type, grouped Circle-wise and Team-wise.
+    Theft type is normalised (trimmed + upper-case) so 'dae' and 'DAE ' count together.
+    Any type found in the data other than DAE / DT / MISUSE is added automatically.
+    """
+    L = models.LoadInspection
+    theft_col = func.upper(func.trim(L.theft_type))
+
+    query = db.query(
+        L.circle, L.team, L.emp_id, L.emp_name,
+        theft_col.label("theft"),
+        func.count(L.id).label("cases"),
+        func.sum(L.assessed_load_kw).label("kw")
+    )
+    if from_date:
+        query = query.filter(L.inspection_date >= from_date)
+    if to_date:
+        query = query.filter(L.inspection_date <= to_date)
+
+    rows = query.group_by(L.circle, L.team, L.emp_id, L.emp_name, theft_col).all()
+
+    found_types = set()
+    circles = {}
+    teams = {}
+
+    def bucket(store, key, base):
+        if key not in store:
+            store[key] = {**base, "total_cases": 0, "total_load_kw": 0.0, "by_type": {}}
+        return store[key]
+
+    for circle, team, emp_id, emp_name, theft, cases, kw in rows:
+        theft = (theft or "UNKNOWN").strip() or "UNKNOWN"
+        circle = circle or "-"
+        team = team or ""
+        kw = float(kw or 0)
+        found_types.add(theft)
+
+        c = bucket(circles, circle, {"circle": circle})
+        t = bucket(teams, (circle, team, emp_id), {
+            "circle": circle, "team": team, "emp_id": emp_id, "emp_name": emp_name
+        })
+        for b in (c, t):
+            b["total_cases"] += cases
+            b["total_load_kw"] += kw
+            slot = b["by_type"].setdefault(theft, {"cases": 0, "kw": 0.0})
+            slot["cases"] += cases
+            slot["kw"] += kw
+
+    theft_types = PREFERRED_THEFT_TYPES + sorted(found_types - set(PREFERRED_THEFT_TYPES))
+
+    def finish(items):
+        for it in items:
+            it["total_load_kw"] = round(it["total_load_kw"], 2)
+            for tt in theft_types:
+                slot = it["by_type"].setdefault(tt, {"cases": 0, "kw": 0.0})
+                slot["kw"] = round(slot["kw"], 2)
+        return items
+
+    circle_analysis = finish(sorted(circles.values(), key=lambda x: x["circle"]))
+    team_analysis = finish(sorted(teams.values(), key=lambda x: (x["circle"], x["emp_name"] or "")))
+    return theft_types, circle_analysis, team_analysis
+
+
+# ------------------------------------------
 # Background Automated Job (Strictly Today IST)
 # ------------------------------------------
 def automated_daily_report_job():
@@ -218,6 +287,10 @@ async def get_redoc_documentation(username: str = Depends(verify_docs_credential
 # ------------------------------------------
 # Frontend Page Routes
 # ------------------------------------------
+@app.get("/favicon.ico", include_in_schema=False)
+def get_favicon():
+    return FileResponse("static/favicon.ico")
+
 @app.get("/")
 def read_root():
     return FileResponse("static/index.html")
@@ -297,6 +370,21 @@ def get_summary_data(
 ):
     circle_summary, name_summary = compute_summaries(db, from_date, to_date)
     return {"circle_summary": circle_summary, "name_summary": name_summary}
+
+
+@app.get("/api/summary/theft-analysis")
+def get_theft_analysis(
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Circle-wise and Team-wise booking analysis split by theft type (DAE / DT / MISUSE)."""
+    theft_types, circle_analysis, team_analysis = compute_theft_analysis(db, from_date, to_date)
+    return {
+        "theft_types": theft_types,
+        "circle_analysis": circle_analysis,
+        "team_analysis": team_analysis
+    }
 
 
 @app.get("/api/inspections/raw")

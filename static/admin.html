@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin - Edit Load Inspection</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/style.css">
     <style>
         select {
@@ -16,12 +20,14 @@
             background-color: #ffffff;
             outline: none;
         }
+
         select:focus {
             border-color: #087e8b;
             box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.15);
         }
     </style>
 </head>
+
 <body>
     <div class="nav-bar">
         <span>Enforcement Administration Portal</span>
@@ -36,9 +42,11 @@
             <h2>Search Inspection Record</h2>
             <div class="form-group">
                 <label for="searchPageNo">Search by Page Number</label>
-                <input type="text" id="searchPageNo" placeholder="Enter Page Number (e.g. 226158)" onkeydown="if(event.key==='Enter') searchByPage()">
+                <input type="text" id="searchPageNo" placeholder="Enter Page Number (e.g. 226158)"
+                    onkeydown="if(event.key==='Enter') searchByPage()">
             </div>
-            <button class="btn-secondary" style="width: 100%; margin-top: 6px;" onclick="searchByPage()">Search Record</button>
+            <button class="btn-secondary" style="width: 100%; margin-top: 6px;" onclick="searchByPage()">Search
+                Record</button>
             <div id="searchStatus" class="alert hidden"></div>
         </div>
 
@@ -259,4 +267,5 @@
         }
     </script>
 </body>
+
 </html>

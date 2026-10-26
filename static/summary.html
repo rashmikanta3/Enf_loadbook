@@ -1,16 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Management Summary - Enforcement Load</title>
     <link rel="stylesheet" href="/static/style.css">
-    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
+
     <!-- Client-side export libraries -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 </head>
+
 <body>
     <div class="nav-bar">
         <span>Enf_load Management Review</span>
@@ -33,12 +38,13 @@
                         <label for="toDate">To Date</label>
                         <input type="date" id="toDate">
                     </div>
-                    <button class="btn-secondary" onclick="fetchSummary()">Apply Filter</button>
-                    <button class="btn-ghost" onclick="resetFilters()">Today</button>
+                    <button class="btn-secondary" onclick="fetchSummary(this)">Apply Filter</button>
+                    <button class="btn-ghost" onclick="resetFilters(this)">Today</button>
                 </div>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn-download-raw" onclick="downloadAllRawRecords()">📥 Download All Records (Excel)</button>
-                    <button id="mailReportBtn" class="btn-email" onclick="sendMailNow()">📧 Dispatch Email</button>
+                    <button class="btn-download-raw" onclick="downloadAllRawRecords(this)">📥 Download All Records
+                        (Excel)</button>
+                    <button id="mailReportBtn" class="btn-email" onclick="sendMailNow(this)">📧 Dispatch Email</button>
                 </div>
             </div>
             <div id="actionStatus" class="alert hidden"></div>
@@ -48,16 +54,17 @@
             <!-- 1. Circle / Team Summary Section -->
             <div class="card">
                 <div class="report-header-actions">
-                    <h2>Circle Summary</h2>
+                    <h2>Circle-Wise Load Booking Summary</h2>
                     <div class="btn-group-download">
-                        <button class="btn-download-excel" onclick="downloadCircleExcel()">📥 Excel</button>
-                        <button class="btn-download-png" onclick="downloadCirclePNG()">📷 Image</button>
+                        <button class="btn-download-excel" onclick="downloadCircleExcel(this)">📥 Excel</button>
+                        <button class="btn-download-png" onclick="downloadCirclePNG(this)">📷 Image</button>
+                        <button class="btn-whatsapp" onclick="shareCircleWhatsApp(this)">🟢 WhatsApp</button>
                     </div>
                 </div>
 
                 <div id="circleCaptureArea" class="capture-card">
                     <div class="report-title-banner">
-                        <h3 id="circleReportTitle">Circle Wise Vigilance Summary</h3>
+                        <h3 id="circleReportTitle">Circle Wise Load Booking Summary</h3>
                         <span id="circleGeneratedAt"></span>
                     </div>
                     <div class="table-container">
@@ -76,19 +83,20 @@
                 </div>
             </div>
 
-            <!-- 2. Name-Wise Summary Section (High-Density Clear Rendering) -->
+            <!-- 2. Name-Wise Summary Section -->
             <div class="card">
                 <div class="report-header-actions">
-                    <h2>Name-Wise Summary</h2>
+                    <h2>Name-Wise Load Booking Summary</h2>
                     <div class="btn-group-download">
-                        <button class="btn-download-excel" onclick="downloadNameExcel()">📥 Excel</button>
-                        <button class="btn-download-png" onclick="downloadNamePNG()">📷 Image</button>
+                        <button class="btn-download-excel" onclick="downloadNameExcel(this)">📥 Excel</button>
+                        <button class="btn-download-png" onclick="downloadNamePNG(this)">📷 Image</button>
+                        <button class="btn-whatsapp" onclick="shareNameWhatsApp(this)">🟢 WhatsApp</button>
                     </div>
                 </div>
 
                 <div id="nameCaptureArea" class="capture-card">
                     <div class="report-title-banner">
-                        <h3 id="nameReportTitle">Name Wise Vigilance Summary</h3>
+                        <h3 id="nameReportTitle">Name Wise Load Booking Summary</h3>
                         <span id="nameGeneratedAt"></span>
                     </div>
                     <div class="table-container">
@@ -109,9 +117,54 @@
                 </div>
             </div>
         </div>
+
+        <!-- 3. Performance Chart (name wise ranking) -->
+        <div class="card">
+            <div class="report-header-actions">
+                <h2 id="perfHeading">Performance Analysis - Name Wise</h2>
+                <div class="btn-group-download">
+                    <div class="perf-toggle">
+                        <button id="perfViewName" class="perf-active" onclick="setPerfView('name')">👤 Name
+                            Wise</button>
+                        <button id="perfViewCircle" onclick="setPerfView('circle')">🏢 Circle Wise</button>
+                    </div>
+                    <select id="perfMetric" onchange="renderPerfChart()"
+                        style="padding:6px;border-radius:6px;border:1px solid #cbd5e1">
+                        <option value="kw">By Load (kW)</option>
+                        <option value="cases">By Cases</option>
+                    </select>
+                    <button class="btn-download-png" onclick="downloadPerfImages(this)">📷 Image</button>
+                    <button class="btn-whatsapp" onclick="sharePerfWhatsApp(this)">🟢 WhatsApp</button>
+                </div>
+            </div>
+            <div id="perfChartPreview" style="overflow-x:auto"></div>
+        </div>
+
+        <!-- 4. DAE / DT / Misuse analysis (circle wise / team wise) -->
+        <div class="card">
+            <div class="report-header-actions">
+                <h2 id="theftHeading">DAE / DT / Misuse Analysis - Circle Wise</h2>
+                <div class="btn-group-download">
+                    <div class="perf-toggle">
+                        <button id="theftViewCircle" class="perf-active" onclick="setTheftView('circle')">🏢 Circle
+                            Wise</button>
+                        <button id="theftViewTeam" onclick="setTheftView('team')">👥 Team Wise</button>
+                    </div>
+                    <select id="theftMetric" onchange="renderTheftChart()"
+                        style="padding:6px;border-radius:6px;border:1px solid #cbd5e1">
+                        <option value="kw">By Load (kW)</option>
+                        <option value="cases">By Cases</option>
+                    </select>
+                    <button class="btn-download-png" onclick="downloadTheftImages(this)">📷 Image</button>
+                    <button class="btn-whatsapp" onclick="shareTheftWhatsApp(this)">🟢 WhatsApp</button>
+                </div>
+            </div>
+            <div id="theftChartPreview" style="overflow-x:auto"></div>
+        </div>
     </div>
 
     <script src="/static/summary.js"></script>
-    
+
 </body>
+
 </html>

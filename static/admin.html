@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin - Edit Load Inspection</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #2d3748;
+            background-color: #ffffff;
+            outline: none;
+        }
+        select:focus {
+            border-color: #087e8b;
+            box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <span>Vigilance Administration Portal</span>
+        <div>
+            <a href="/" class="nav-link">Entry Form</a>
+            <a href="/summary" class="nav-link">Summary Review</a>
+        </div>
+    </div>
+
+    <div class="container container-sm">
+        <div class="card">
+            <h2>Search Inspection Record</h2>
+            <div class="form-group">
+                <label for="searchPageNo">Search by Page Number</label>
+                <input type="text" id="searchPageNo" placeholder="Enter Page Number (e.g. 226158)" onkeydown="if(event.key==='Enter') searchByPage()">
+            </div>
+            <button class="btn-secondary" style="width: 100%; margin-top: 6px;" onclick="searchByPage()">Search Record</button>
+            <div id="searchStatus" class="alert hidden"></div>
+        </div>
+
+        <div id="recordResults"></div>
+    </div>
+
+    <script>
+        function getOrPromptPassword() {
+            let pass = sessionStorage.getItem('admin_pass');
+            if (!pass) {
+                pass = prompt("🔑 Please enter Admin Password:");
+                if (pass && pass.trim()) {
+                    sessionStorage.setItem('admin_pass', pass.trim());
+                    return pass.trim();
+                }
+                return null;
+            }
+            return pass;
+        }
+
+        function resetAdminPassword() {
+            sessionStorage.removeItem('admin_pass');
+            const pass = prompt("🔑 Enter new Admin Password for this session:");
+            if (pass && pass.trim()) {
+                sessionStorage.setItem('admin_pass', pass.trim());
+                alert("Password saved for current session.");
+            }
+        }
+
+        async function searchByPage() {
+            const pageNo = document.getElementById('searchPageNo').value.trim();
+            const statusDiv = document.getElementById('searchStatus');
+            const resultsDiv = document.getElementById('recordResults');
+            resultsDiv.innerHTML = '';
+
+            if (!pageNo) {
+                statusDiv.className = "alert error";
+                statusDiv.innerText = "Please provide a Page Number.";
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            let pass = getOrPromptPassword();
+            if (!pass) {
+                statusDiv.className = "alert error";
+                statusDiv.innerText = "Password required to search admin records.";
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/inspections/by-page/${encodeURIComponent(pageNo)}`, {
+                    headers: { 'X-Admin-Password': pass }
+                });
+
+                if (res.status === 401) {
+                    sessionStorage.removeItem('admin_pass');
+                    statusDiv.className = "alert error";
+                    statusDiv.innerText = "Invalid admin password. Click Search again to re-enter.";
+                    statusDiv.classList.remove('hidden');
+                    return;
+                }
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Search failed");
+                }
+
+                statusDiv.classList.add('hidden');
+                const data = await res.json();
+
+                data.forEach(item => {
+                    resultsDiv.innerHTML += `
+                        <div class="card" id="card-${item.id}">
+                            <h2 style="font-size: 1.1rem; color: #0b3954;">Record #${item.id} Details</h2>
+                            
+                            <!-- Employee ID & Live Looked-up Name -->
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label>Employee ID</label>
+                                    <input type="text" id="empid-${item.id}" value="${item.emp_id}" onchange="lookupAdminEmp(${item.id})">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label>Employee Name</label>
+                                    <input type="text" id="empname-${item.id}" value="${item.emp_name}" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Circle</label>
+                                <input type="text" id="circle-${item.id}" value="${item.circle}" readonly>
+                            </div>
+
+                            <!-- Inspection Date & Dropdown Theft Type -->
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label>Inspection Date</label>
+                                    <input type="date" id="date-${item.id}" value="${item.inspection_date}">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label>Theft Type</label>
+                                    <select id="theft-${item.id}">
+                                        <option value="DAE" ${item.theft_type === 'DAE' ? 'selected' : ''}>DAE (Meter Tamper / Bypass)</option>
+                                        <option value="DT" ${item.theft_type === 'DT' ? 'selected' : ''}>DT (Direct Hooking / Cable Cut)</option>
+                                        <option value="MISUSE" ${item.theft_type === 'MISUSE' ? 'selected' : ''}>MISUSE (Tariff Misuse / Subletting)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Book No & Page No -->
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label>Load Book No</label>
+                                    <input type="text" id="book-${item.id}" value="${item.load_book_no}">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label>Page No</label>
+                                    <input type="text" id="page-${item.id}" value="${item.page_no}">
+                                </div>
+                            </div>
+
+                            <!-- Assessed Load -->
+                            <div class="form-group">
+                                <label>Assessed Load (kW) - Max: 100.00 kW</label>
+                                <input type="number" id="load-${item.id}" step="0.01" min="0.01" max="100.00" value="${item.assessed_load_kw}">
+                            </div>
+
+                            <button class="btn-secondary" style="background:#2b6cb0; width: 100%;" onclick="updateRecord(${item.id})">Save Changes</button>
+                            <div id="status-${item.id}" class="alert hidden"></div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                statusDiv.className = "alert error";
+                statusDiv.innerText = err.message;
+                statusDiv.classList.remove('hidden');
+            }
+        }
+
+        async function lookupAdminEmp(recordId) {
+            const empIdInput = document.getElementById(`empid-${recordId}`);
+            const nameInput = document.getElementById(`empname-${recordId}`);
+            const circleInput = document.getElementById(`circle-${recordId}`);
+            const val = empIdInput.value.trim();
+
+            if (!val) return;
+
+            try {
+                const res = await fetch(`/api/employees/${encodeURIComponent(val)}`);
+                if (res.ok) {
+                    const emp = await res.json();
+                    nameInput.value = emp.name;
+                    circleInput.value = emp.circle;
+                } else {
+                    alert(`Employee ID '${val}' not found in database.`);
+                }
+            } catch (e) {
+                console.error("Employee lookup error", e);
+            }
+        }
+
+        async function updateRecord(recordId) {
+            const pass = getOrPromptPassword();
+            const statusDiv = document.getElementById(`status-${recordId}`);
+
+            if (!pass) {
+                statusDiv.className = "alert error";
+                statusDiv.innerText = "Admin password required to save changes.";
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            const payload = {
+                emp_id: document.getElementById(`empid-${recordId}`).value.trim(),
+                inspection_date: document.getElementById(`date-${recordId}`).value,
+                theft_type: document.getElementById(`theft-${recordId}`).value,
+                load_book_no: document.getElementById(`book-${recordId}`).value.trim(),
+                page_no: document.getElementById(`page-${recordId}`).value.trim(),
+                assessed_load_kw: parseFloat(document.getElementById(`load-${recordId}`).value)
+            };
+
+            if (payload.assessed_load_kw <= 0 || payload.assessed_load_kw > 100) {
+                statusDiv.className = "alert error";
+                statusDiv.innerText = "Assessed load must be between 0.01 and 100.00 kW.";
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/inspections/${recordId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': pass
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 401) {
+                    sessionStorage.removeItem('admin_pass');
+                    throw new Error("Invalid admin password. Please try again.");
+                }
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Update failed");
+                }
+
+                const resData = await res.json();
+                statusDiv.className = "alert success";
+                statusDiv.innerText = resData.message || "Record updated successfully!";
+                statusDiv.classList.remove('hidden');
+            } catch (err) {
+                statusDiv.className = "alert error";
+                statusDiv.innerText = err.message;
+                statusDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

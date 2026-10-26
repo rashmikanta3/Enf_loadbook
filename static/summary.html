@@ -1,87 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Management Summary - Vigilance Review</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Management Summary - Vigilance Load</title>
     <link rel="stylesheet" href="/static/style.css">
-</head>
+    
+    <!-- Client-side export libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
+</head>
 <body>
     <div class="nav-bar">
-        <span>⚡ Executive Management Review</span>
-        <a href="/" class="nav-link">← Back to Inspection Entry</a>
+        <span>Vigilance Management Review</span>
+        <div>
+            <a href="/" class="nav-link">New Entry</a>
+            <a href="/admin" class="nav-link">Admin Edit</a>
+        </div>
     </div>
 
     <div class="container">
-        <!-- Date Filters & Actions -->
-        <div class="filter-bar card">
-            <div class="filter-inputs">
-                <div>
-                    <label>From Date:</label>
-                    <input type="date" id="filterFromDate">
+        <!-- Filter and Action Bar -->
+        <div class="card">
+            <div class="filter-bar">
+                <div class="filter-inputs">
+                    <div class="filter-item">
+                        <label for="fromDate">From Date</label>
+                        <input type="date" id="fromDate">
+                    </div>
+                    <div class="filter-item">
+                        <label for="toDate">To Date</label>
+                        <input type="date" id="toDate">
+                    </div>
+                    <button class="btn-secondary" onclick="fetchSummary()">Apply Filter</button>
+                    <button class="btn-ghost" onclick="resetFilters()">Today</button>
                 </div>
-                <div>
-                    <label>To Date:</label>
-                    <input type="date" id="filterToDate">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-download-raw" onclick="downloadAllRawRecords()">📥 Download All Records (Excel)</button>
+                    <button id="mailReportBtn" class="btn-email" onclick="sendMailNow()">📧 Dispatch Email</button>
                 </div>
-                <button id="filterBtn" class="btn-secondary">Apply Filter</button>
-                <button id="resetBtn" class="btn-ghost">Reset</button>
             </div>
-            <button id="mailReportBtn" class="btn-email">✉️ Email This Summary to Management</button>
+            <div id="actionStatus" class="alert hidden"></div>
         </div>
 
-        <div id="summaryAlert" class="alert hidden"></div>
-
         <div class="grid-layout">
-            <!-- Circle Summary -->
-            <section class="card">
-                <h2>Circle-Wise Summary</h2>
-                <div class="table-container">
-                    <table id="circleTable">
-                        <thead>
-                            <tr>
-                                <th>Circle</th>
-                                <th>Total Cases</th>
-                                <th>Total Load (kW)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="3">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- 1. Circle / Team Summary Section -->
+            <div class="card">
+                <div class="report-header-actions">
+                    <h2>Circle Summary</h2>
+                    <div class="btn-group-download">
+                        <button class="btn-download-excel" onclick="downloadCircleExcel()">📥 Excel</button>
+                        <button class="btn-download-png" onclick="downloadCirclePNG()">📷 Image</button>
+                    </div>
                 </div>
-            </section>
 
-            <!-- Team Summary -->
-            <section class="card">
-                <h2>Name-Wise Summary</h2>
-                <div class="table-container">
-                    <table id="nameTable">
-                        <thead>
-                            <tr>
-                                <th>Employee Name</th>
-                                <th>Emp ID</th>
-                                <th>Circle</th>
-                                <th>Total Cases</th>
-                                <th>Total Load (kW)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="5">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div id="circleCaptureArea" class="capture-card">
+                    <div class="report-title-banner">
+                        <h3 id="circleReportTitle">Circle Wise Vigilance Summary</h3>
+                        <span id="circleGeneratedAt"></span>
+                    </div>
+                    <div class="table-container">
+                        <table id="circleTable" class="export-table">
+                            <thead>
+                                <tr>
+                                    <th>Circle</th>
+                                    <th class="text-center" style="width: 90px;">Cases</th>
+                                    <th class="text-right" style="width: 140px;">Total Load (kW)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="circleSummaryBody"></tbody>
+                            <tfoot id="circleSummaryFoot"></tfoot>
+                        </table>
+                    </div>
                 </div>
-            </section>
+            </div>
+
+            <!-- 2. Name-Wise Summary Section (High-Density Clear Rendering) -->
+            <div class="card">
+                <div class="report-header-actions">
+                    <h2>Name-Wise Summary</h2>
+                    <div class="btn-group-download">
+                        <button class="btn-download-excel" onclick="downloadNameExcel()">📥 Excel</button>
+                        <button class="btn-download-png" onclick="downloadNamePNG()">📷 Image</button>
+                    </div>
+                </div>
+
+                <div id="nameCaptureArea" class="capture-card">
+                    <div class="report-title-banner">
+                        <h3 id="nameReportTitle">Name Wise Vigilance Summary</h3>
+                        <span id="nameGeneratedAt"></span>
+                    </div>
+                    <div class="table-container">
+                        <table id="nameTable" class="export-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 120px;">Circle</th>
+                                    <th style="width: 85px;">Emp ID</th>
+                                    <th>Employee Name</th>
+                                    <th class="text-center" style="width: 70px;">Cases</th>
+                                    <th class="text-right" style="width: 130px;">Total Load (kW)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nameSummaryBody"></tbody>
+                            <tfoot id="nameSummaryFoot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script src="/static/summary.js"></script>
+    
 </body>
-
 </html>

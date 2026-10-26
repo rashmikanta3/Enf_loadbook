@@ -97,7 +97,7 @@ input[type="date"] {
     padding: 11px 12px;
     border: 1px solid #cbd5e0;
     border-radius: 8px;
-    font-size: 16px; 
+    font-size: 16px;
     color: #2d3748;
     background-color: #fff;
     outline: none;
@@ -176,9 +176,20 @@ button {
     background: #062335;
 }
 
-.btn-secondary { background: #087e8b; color: white; }
-.btn-ghost { background: #e2e8f0; color: #4a5568; }
-.btn-email { background: #2f855a; color: white; }
+.btn-secondary {
+    background: #087e8b;
+    color: white;
+}
+
+.btn-ghost {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.btn-email {
+    background: #2f855a;
+    color: white;
+}
 
 /* --- Summary Filter Bar --- */
 .filter-bar {
@@ -211,12 +222,14 @@ button {
 
 table {
     width: 100%;
-    min-width: 480px; /* Forces scroll container rather than squishing text */
+    min-width: 480px;
+    /* Forces scroll container rather than squishing text */
     border-collapse: collapse;
     font-size: 0.9rem;
 }
 
-th, td {
+th,
+td {
     padding: 10px 12px;
     border: 1px solid #e2e8f0;
     text-align: left;
@@ -241,9 +254,20 @@ th {
     margin-top: 12px;
     font-size: 0.9rem;
 }
-.alert.success { background: #c6f6d5; color: #22543d; }
-.alert.error { background: #fed7d7; color: #742a2a; }
-.hidden { display: none; }
+
+.alert.success {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.alert.error {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.hidden {
+    display: none;
+}
 
 
 /* ========================================================= */
@@ -315,4 +339,123 @@ th {
     .nav-link {
         align-self: flex-start;
     }
+}
+
+/* style for summery.html */
+.report-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.btn-group-download {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-download-excel {
+    background-color: #2b6cb0;
+    color: #ffffff;
+    font-size: 0.85rem;
+    padding: 7px 12px;
+    border-radius: 6px;
+}
+
+.btn-download-png {
+    background-color: #4a5568;
+    color: #ffffff;
+    font-size: 0.85rem;
+    padding: 7px 12px;
+    border-radius: 6px;
+}
+
+.btn-download-raw {
+    background-color: #0b3954;
+    color: #ffffff;
+    font-size: 0.9rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+}
+
+/* --- Capture Canvas Card Optimization for 70+ Records --- */
+.capture-card {
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.report-title-banner {
+    border-bottom: 2px solid #0b3954;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.report-title-banner h3 {
+    font-size: 1.05rem;
+    color: #0b3954;
+    font-weight: 700;
+    margin: 0;
+}
+
+.report-title-banner span {
+    font-size: 0.8rem;
+    color: #718096;
+    font-weight: 600;
+}
+
+/* High-density, crystal clear export table */
+.export-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    color: #1a202c;
+    line-height: 1.25;
+}
+
+.export-table th {
+    background-color: #ebf8ff;
+    color: #2b6cb0;
+    font-weight: 700;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.export-table td {
+    padding: 5px 8px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.export-table tbody tr:nth-child(even) {
+    background-color: #f7fafc;
+}
+
+.export-table tfoot tr {
+    background-color: #edf2f7;
+    font-weight: 800;
+    border-top: 2px solid #a0aec0;
+}
+
+.export-table tfoot td {
+    padding: 7px 8px;
+    font-size: 0.88rem;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.text-center {
+    text-align: center !important;
 }

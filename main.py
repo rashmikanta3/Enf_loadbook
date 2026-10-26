@@ -1,33 +1,64 @@
 import os
-from datetime import date
+import secrets
+import logging
+from datetime import date, datetime
 from typing import Optional, List
 from contextlib import asynccontextmanager
+from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException, Query, Header
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException, Query, Header, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from apscheduler.schedulers.background import BackgroundScheduler
-from zoneinfo import ZoneInfo
-from datetime import datetime
 
 from database import engine, get_db, SessionLocal
 import models
 import mailer
 
+# Logger configured for instant visibility in Docker container output
+logger = logging.getLogger("uvicorn.info")
+
+# Environment Credentials
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+DOCS_USERNAME = os.getenv("DOCS_USERNAME", "admin")
+DOCS_PASSWORD = os.getenv("DOCS_PASSWORD", ADMIN_PASSWORD)
+
+# ------------------------------------------
+# Authentication Guards
+# ------------------------------------------
+security = HTTPBasic()
+
+def verify_docs_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    """Enforces HTTP Basic Authentication on API documentation routes."""
+    correct_username = secrets.compare_digest(credentials.username, DOCS_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, DOCS_PASSWORD)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 def verify_admin_password(x_admin_password: Optional[str] = Header(None)):
+    """Verifies admin session password for modifying records."""
     if not x_admin_password or x_admin_password.strip() != ADMIN_PASSWORD:
         raise HTTPException(status_code=401, detail="Invalid admin password")
     return True
 
+# Initialize database schema
 models.Base.metadata.create_all(bind=engine)
 
-# Configurable scheduled IST hours for daily report
+# Configurable scheduled IST hours (24-hour format)
 SCHEDULED_HOURS: List[int] = [11, 13, 15, 17, 19, 21]
+
+# Global scheduler instance
+scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
 
 
 # ------------------------------------------
@@ -51,7 +82,7 @@ class InspectionUpdate(BaseModel):
 
 
 # ------------------------------------------
-# Summary Query Helper (Circle & Name wise)
+# Summary Query Helper
 # ------------------------------------------
 def compute_summaries(db: Session, from_date: Optional[date] = None, to_date: Optional[date] = None):
     query_circle = db.query(
@@ -80,7 +111,7 @@ def compute_summaries(db: Session, from_date: Optional[date] = None, to_date: Op
         models.LoadInspection.circle.asc()
     ).all()
     
-    # Sort Circle Ascending, then Emp Name Ascending
+    # Sort Circle Ascending, then Employee Name Ascending
     name_rows = query_name.group_by(
         models.LoadInspection.emp_name,
         models.LoadInspection.emp_id,
@@ -107,26 +138,37 @@ def compute_summaries(db: Session, from_date: Optional[date] = None, to_date: Op
     return circle_summary, name_summary
 
 
+# ------------------------------------------
+# Background Automated Job (Strictly Today IST)
+# ------------------------------------------
 def automated_daily_report_job():
-    """Triggered on schedule: selects strictly today's IST date."""
     ist_now = datetime.now(ZoneInfo("Asia/Kolkata"))
     today_ist = ist_now.date()
+    logger.info(f"⏰ [Scheduler] Executing automated dispatch strictly for TODAY: {today_ist} (IST)")
     db: Session = SessionLocal()
     try:
         circle_sum, name_sum = compute_summaries(db, from_date=today_ist, to_date=today_ist)
-        mailer.send_summary_email(
+        success = mailer.send_summary_email(
             circle_summary=circle_sum,
             name_summary=name_sum,
             from_date=today_ist,
             to_date=today_ist
         )
+        if success:
+            logger.info(f"✅ [Scheduler] Report for {today_ist} dispatched successfully.")
+        else:
+            logger.warning("⚠️ [Scheduler] Email dispatch failed.")
+    except Exception as e:
+        logger.error(f"❌ [Scheduler Error]: {e}")
     finally:
         db.close()
 
 
+# ------------------------------------------
+# Application Lifespan
+# ------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
     cron_hours_str = ",".join(str(h) for h in sorted(SCHEDULED_HOURS))
     scheduler.add_job(
         automated_daily_report_job,
@@ -137,16 +179,44 @@ async def lifespan(app: FastAPI):
         replace_existing=True
     )
     scheduler.start()
+    logger.info(f"🚀 [Scheduler Active] Automated emails scheduled at hours [{cron_hours_str}] (Asia/Kolkata).")
+    
     yield
+    
     scheduler.shutdown()
+    logger.info("🛑 [Scheduler Stopped] Background scheduler closed.")
 
 
-app = FastAPI(title="Vigilance Load Tracking System", lifespan=lifespan)
+# Initialize FastAPI app with default docs disabled for authentication protection
+app = FastAPI(
+    title="Vigilance Load Tracking System",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ------------------------------------------
-# Page Routes
+# Protected Documentation Routes
+# ------------------------------------------
+@app.get("/openapi.json", include_in_schema=False)
+async def get_open_api_endpoint(username: str = Depends(verify_docs_credentials)):
+    return app.openapi()
+
+@app.get("/docs", include_in_schema=False)
+async def get_documentation(username: str = Depends(verify_docs_credentials)):
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="API Documentation - Vigilance System")
+
+@app.get("/redoc", include_in_schema=False)
+async def get_redoc_documentation(username: str = Depends(verify_docs_credentials)):
+    return get_redoc_html(openapi_url="/openapi.json", title="ReDoc Documentation - Vigilance System")
+
+
+# ------------------------------------------
+# Frontend Page Routes
 # ------------------------------------------
 @app.get("/")
 def read_root():
@@ -162,7 +232,7 @@ def read_admin():
 
 
 # ------------------------------------------
-# General & Form APIs
+# Inspection & Master APIs
 # ------------------------------------------
 @app.get("/api/employees/{emp_id}")
 def get_employee(emp_id: str, db: Session = Depends(get_db)):
@@ -186,7 +256,7 @@ def check_duplicate_page(page_no: str, db: Session = Depends(get_db)):
 def create_inspection(payload: InspectionCreate, db: Session = Depends(get_db)):
     clean_page = payload.page_no.strip()
 
-    # Duplicate check: Disallow saving existing page number
+    # Reject duplicate page number entries
     existing_record = db.query(models.LoadInspection).filter(
         models.LoadInspection.page_no == clean_page
     ).first()
@@ -235,7 +305,7 @@ def get_raw_inspections(
     to_date: Optional[date] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """Fetches all raw loadbook entries matching date filter for Excel export."""
+    """Fetches all raw loadbook entries matching date filter for full Excel dump."""
     query = db.query(models.LoadInspection)
     if from_date:
         query = query.filter(models.LoadInspection.inspection_date >= from_date)
@@ -275,6 +345,25 @@ def manual_email_trigger(
     circle_sum, name_sum = compute_summaries(db, from_date, to_date)
     background_tasks.add_task(mailer.send_summary_email, circle_sum, name_sum, from_date, to_date)
     return {"status": "queued", "message": "Summary report sent to management."}
+
+
+# ------------------------------------------
+# Scheduler Status Diagnostic
+# ------------------------------------------
+@app.get("/api/scheduler/status")
+def get_scheduler_status():
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            "job_id": job.id,
+            "next_run_time_ist": str(job.next_run_time),
+            "is_running": scheduler.running
+        })
+    return {
+        "scheduler_active": scheduler.running,
+        "configured_hours_ist": SCHEDULED_HOURS,
+        "jobs": jobs
+    }
 
 
 # ------------------------------------------
@@ -329,7 +418,6 @@ def update_inspection(
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
 
-    # If page number is modified, check duplicate against other records
     clean_page = payload.page_no.strip()
     dup = db.query(models.LoadInspection).filter(
         models.LoadInspection.page_no == clean_page,

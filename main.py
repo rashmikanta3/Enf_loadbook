@@ -131,7 +131,7 @@ def compute_summaries(db: Session, from_date: Optional[date] = None, to_date: Op
             "emp_id": emp_id,
             "circle": c,
             "total_cases": count,
-            "total_load_kw": round(float(total_kw or 0), 2)
+            "total_load_kw": round(float(total_kw or 0), 3)
         }
         for name, emp_id, c, count, total_kw in name_rows
     ]
@@ -351,7 +351,7 @@ def create_inspection(payload: InspectionCreate, db: Session = Depends(get_db)):
         theft_type=payload.theft_type,
         load_book_no=payload.load_book_no.strip(),
         page_no=clean_page,
-        assessed_load_kw=round(payload.assessed_load_kw, 2),
+        assessed_load_kw=round(payload.assessed_load_kw, 3),
         inspection_date=payload.inspection_date
     )
     db.add(inspection)
@@ -526,7 +526,7 @@ def update_inspection(
     record.theft_type = payload.theft_type
     record.load_book_no = payload.load_book_no.strip()
     record.page_no = clean_page
-    record.assessed_load_kw = round(payload.assessed_load_kw, 2)
+    record.assessed_load_kw = round(payload.assessed_load_kw, 3)
 
     db.commit()
     return {"status": "success", "message": f"Record updated successfully for {emp.name} ({emp.circle})!"}

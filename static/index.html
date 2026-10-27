@@ -84,8 +84,8 @@
                 <!-- Inside static/index.html: Update the Assessed Load form-group -->
                 <div class="form-group">
                     <label for="assessedLoad">Assessed Load (kW)</label>
-                    <input type="number" id="assessedLoad" step="0.01" min="0.01" max="100.00" placeholder="e.g. 2.450"
-                        required>
+                    <input type="number" id="assessedLoad" step="0.001" min="0.001" max="100.000" placeholder="e.g. 2.450"
+                        required value="${parseFloat(item.assessed_load_kw).toFixed(3)}">
                 </div>
 
                 <button type="submit" id="submitBtn">Save Entry</button>

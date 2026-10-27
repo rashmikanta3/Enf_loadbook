@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
             theft_type: document.querySelector('input[name="theftType"]:checked').value,
             load_book_no: document.getElementById("loadBookNo").value.trim(),
             page_no: document.getElementById("pageNo").value.trim(),
-            assessed_load_kw: parseFloat(document.getElementById("assessedLoad").value)
+            assessed_load_kw: document.getElementById("assessedLoad").value
         };
 
         const res = await fetch("/api/inspections", {
